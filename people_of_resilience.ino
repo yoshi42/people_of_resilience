@@ -1,8 +1,9 @@
 #include <FastLED.h>
 
 #define LED_PIN     4
+#define BUTTON_PIN  3
 #define NUM_LEDS    144
-#define BRIGHTNESS  32
+#define BRIGHTNESS  25
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 
@@ -10,13 +11,14 @@ CRGB leds[NUM_LEDS];
 bool ledStates[NUM_LEDS] = {false};
 
 enum Mode {
+  READ,
   FILLING,
   HOLD,
   FADEOUT,
   WAIT,
 };
 
-Mode currentMode = FILLING;
+Mode currentMode = READ;
 unsigned long modeStartTime = 0;
 
 // -------------------------
@@ -24,30 +26,31 @@ unsigned long modeStartTime = 0;
 // -------------------------
 
 // ⌛ Тривалість фаз (мс)
-const unsigned long DURATION_FILL  = 60000;  // фаза засвічування
+const unsigned long DURATION_FILL  = 20000;  // фаза засвічування
 const unsigned long DURATION_HOLD  = 10000;  // утримання світла
-const unsigned long DURATION_WAIT  = 5000;   // гасіння перед новим циклом
-const unsigned long DURATION_FADE  = 1500;   // тривалість fadeout
-
+const unsigned long DURATION_WAIT  = 3000;   // гасіння перед новим циклом
+const unsigned long DURATION_FADE  = 500;   // тривалість fadeout
+//private/var/folders/hm/k_sprrnd565bfqlhlqgckdqc0000gn/T/.arduinoIDE-unsaved202587-50396-gj91hj.bv7vo/Debounce/Debounce.ino
 // ⏱️ Затримка між оновленнями (мс)
 const unsigned long UPDATE_DELAY_MS = 80;
 
 // 🎛️ Ймовірність вмикання та вимкнення (від 0 до 1)
-const float LIGHT_ON_PROB_START  = 0.18;  // на початку
-const float LIGHT_ON_PROB_END    = 0.08;  // в кінці
+const float LIGHT_ON_PROB_START  = 0.10;  // на початку
+const float LIGHT_ON_PROB_END    = 0.15;  // в кінці
 
-const float LIGHT_OFF_PROB_START = 0.03;  // на початку
-const float LIGHT_OFF_PROB_END   = 0.12;  // в кінці
+const float LIGHT_OFF_PROB_START = 0.05;  // на початку
+const float LIGHT_OFF_PROB_END   = 0.03;  // в кінці
 
-const int UPDATES_PER_CYCLE = 3;  // скільки світлодіодів обробляємо за один loop
+const int UPDATES_PER_CYCLE = 2;  // скільки світлодіодів обробляємо за один loop
 
 // 🎨 Кольори (змінюй як хочеш)
-CRGB COLOR_1 = CRGB::Blue;
-CRGB COLOR_2 = CRGB::Yellow;
+CRGB COLOR_1 = CRGB(255, 160, 25);
+CRGB COLOR_2 = CRGB(255, 160, 25);
 
 // -------------------------
 
 void setup() {
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
   delay(100);
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS)
          .setCorrection(TypicalLEDStrip);
@@ -61,6 +64,15 @@ void loop() {
   unsigned long elapsed = now - modeStartTime;
 
   switch (currentMode) {
+  case READ: {
+      if (digitalRead(BUTTON_PIN) == LOW) {
+        delay(50);
+        currentMode = FILLING;
+        modeStartTime = millis();
+      }
+    break;
+  } 
+
     case FILLING: {
       float progress = (float)elapsed / DURATION_FILL;
       progress = constrain(progress, 0.0, 1.0);
@@ -89,6 +101,12 @@ void loop() {
       if (elapsed >= DURATION_FILL) {
         currentMode = HOLD;
         modeStartTime = now;
+        
+        for (int i = 0; i < NUM_LEDS; i++) {
+        int j = random(NUM_LEDS);
+        leds[j] = CRGB(255, 160, 25);
+        FastLED.show();
+        }
       }
       break;
     }
@@ -102,7 +120,7 @@ void loop() {
 
     case FADEOUT:
       for (int i = 0; i < NUM_LEDS; i++) {
-        leds[i].fadeToBlackBy(40);
+        leds[i].fadeToBlackBy(255);
         ledStates[i] = false;
       }
       FastLED.show();
@@ -117,7 +135,7 @@ void loop() {
 
     case WAIT:
       if (elapsed >= DURATION_WAIT) {
-        currentMode = FILLING;
+        currentMode = READ;
         modeStartTime = now;
       }
       break;
