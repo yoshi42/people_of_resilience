@@ -28,7 +28,7 @@ unsigned long modeStartTime = 0;
 // ⌛ Тривалість фаз (мс)
 const unsigned long DURATION_FILL  = 20000;  // фаза засвічування
 const unsigned long DURATION_HOLD  = 10000;  // утримання світла
-const unsigned long DURATION_WAIT  = 3000;   // гасіння перед новим циклом
+const unsigned long DURATION_WAIT  = 1000;   // гасіння перед новим циклом
 const unsigned long DURATION_FADE  = 500;   // тривалість fadeout
 //private/var/folders/hm/k_sprrnd565bfqlhlqgckdqc0000gn/T/.arduinoIDE-unsaved202587-50396-gj91hj.bv7vo/Debounce/Debounce.ino
 // ⏱️ Затримка між оновленнями (мс)
@@ -50,6 +50,9 @@ CRGB COLOR_2 = CRGB(255, 160, 25);
 // -------------------------
 
 void setup() {
+  Serial.begin(115200);
+  while(!Serial);
+  Serial.println("Started");
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   delay(100);
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS)
@@ -65,8 +68,10 @@ void loop() {
 
   switch (currentMode) {
   case READ: {
+      Serial.println("READ");
       if (digitalRead(BUTTON_PIN) == LOW) {
         delay(50);
+        Serial.println("Button pressed");
         currentMode = FILLING;
         modeStartTime = millis();
       }
@@ -74,6 +79,7 @@ void loop() {
   } 
 
     case FILLING: {
+      Serial.println("FILLING");
       float progress = (float)elapsed / DURATION_FILL;
       progress = constrain(progress, 0.0, 1.0);
 
@@ -112,6 +118,7 @@ void loop() {
     }
 
     case HOLD:
+      Serial.println("HOLD");
       if (elapsed >= DURATION_HOLD) {
         currentMode = FADEOUT;
         modeStartTime = now;
@@ -119,6 +126,7 @@ void loop() {
       break;
 
     case FADEOUT:
+      Serial.println("FADEOUT");
       for (int i = 0; i < NUM_LEDS; i++) {
         leds[i].fadeToBlackBy(255);
         ledStates[i] = false;
@@ -134,6 +142,7 @@ void loop() {
       break;
 
     case WAIT:
+      Serial.println("WAIT");
       if (elapsed >= DURATION_WAIT) {
         currentMode = READ;
         modeStartTime = now;
